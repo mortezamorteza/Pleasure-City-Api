@@ -1,14 +1,13 @@
 [project]
 name = "pleasure-city-api"
 version = "1.0.0"
-description = "Pleasure City Backend API"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi"
+    "fastapi",
 ]
 
 [dependency-groups]
 dev = [
     "workers-py",
-    "workers-runtime-sdk"
+    "workers-runtime-sdk",
 ]
