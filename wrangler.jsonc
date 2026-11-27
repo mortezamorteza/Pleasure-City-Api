@@ -5,5 +5,12 @@
   "compatibility_date": "2026-11-27",
   "compatibility_flags": [
     "python_workers"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pleasure-city-db",
+      "database_id": "cbec16a8-3586-4652-b160-f8b8d60e2164"
+    }
   ]
 }
