@@ -8,12 +8,6 @@ from database import fetch_one, fetch_all, execute_query
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-==============================
-
-MODELS
-
-==============================
-
 class RegisterUser(BaseModel):
 username: str
 email: Optional[str] = None
@@ -29,43 +23,25 @@ class ChangePassword(BaseModel):
 old_password: str
 new_password: str
 
-==============================
-
-PASSWORD
-
-==============================
-
 def hash_password(password: str):
 salt = secrets.token_hex(16)
-
 hashed = hashlib.sha256(
-    (salt + password).encode("utf-8")
+(salt + password).encode("utf-8")
 ).hexdigest()
-
 return salt + ":" + hashed
 
 def verify_password(password: str, stored: str):
 try:
 salt, hashed = stored.split(":", 1)
-
-    check = hashlib.sha256(
-        (salt + password).encode("utf-8")
-    ).hexdigest()
-
-    return secrets.compare_digest(check, hashed)
-
+check = hashlib.sha256(
+(salt + password).encode("utf-8")
+).hexdigest()
+return secrets.compare_digest(check, hashed)
 except Exception:
-    return False
-
-==============================
-
-REGISTER
-
-==============================
+return False
 
 @router.post("/register")
 async def register_user(data: RegisterUser, request: Request):
-
 username = data.username.strip()
 email = data.email.strip().lower() if data.email else None
 
@@ -90,7 +66,6 @@ if email:
         "SELECT id FROM users WHERE email = ?",
         email
     )
-
     if existing_email:
         raise HTTPException(409, "Email already exists")
 
@@ -123,23 +98,34 @@ return {
     "user": user
 }
 
-==============================
+@router.get("/search/{username}")
+async def search_users(username: str, request: Request):
+users = await fetch_all(
+request,
+"""
+SELECT id, username, avatar, bio
+FROM users
+WHERE username LIKE ? AND is_active = 1
+LIMIT 20
+""",
+"%" + username + "%"
+)
 
-GET USER PROFILE
-
-==============================
+return {
+    "success": True,
+    "users": users
+}
 
 @router.get("/{user_id}")
 async def get_user(user_id: int, request: Request):
-
 user = await fetch_one(
-    request,
-    """
-    SELECT id, username, avatar, bio, created_at
-    FROM users
-    WHERE id = ? AND is_active = 1
-    """,
-    user_id
+request,
+"""
+SELECT id, username, avatar, bio, created_at
+FROM users
+WHERE id = ? AND is_active = 1
+""",
+user_id
 )
 
 if not user:
@@ -150,48 +136,16 @@ return {
     "user": user
 }
 
-==============================
-
-SEARCH USERS
-
-==============================
-
-@router.get("/search/{username}")
-async def search_users(username: str, request: Request):
-
-users = await fetch_all(
-    request,
-    """
-    SELECT id, username, avatar, bio
-    FROM users
-    WHERE username LIKE ? AND is_active = 1
-    LIMIT 20
-    """,
-    "%" + username + "%"
-)
-
-return {
-    "success": True,
-    "users": users
-}
-
-==============================
-
-UPDATE PROFILE
-
-==============================
-
 @router.put("/{user_id}")
 async def update_profile(
 user_id: int,
 data: UpdateProfile,
 request: Request
 ):
-
 user = await fetch_one(
-    request,
-    "SELECT id FROM users WHERE id = ? AND is_active = 1",
-    user_id
+request,
+"SELECT id FROM users WHERE id = ? AND is_active = 1",
+user_id
 )
 
 if not user:
@@ -232,15 +186,16 @@ if "email" in updates and updates["email"]:
         raise HTTPException(409, "Email already exists")
 
 allowed = ["username", "email", "avatar", "bio"]
-
 fields = [key for key in updates if key in allowed]
 
 if not fields:
     raise HTTPException(400, "Invalid fields")
 
-query = "UPDATE users SET " + ", ".join(
-    key + " = ?" for key in fields
-) + " WHERE id = ?"
+query = (
+    "UPDATE users SET "
+    + ", ".join(key + " = ?" for key in fields)
+    + " WHERE id = ?"
+)
 
 values = [updates[key] for key in fields]
 values.append(user_id)
@@ -252,32 +207,22 @@ return {
     "message": "Profile updated"
 }
 
-==============================
-
-CHANGE PASSWORD
-
-==============================
-
 @router.put("/{user_id}/password")
 async def change_password(
 user_id: int,
 data: ChangePassword,
 request: Request
 ):
-
 user = await fetch_one(
-    request,
-    "SELECT password FROM users WHERE id = ? AND is_active = 1",
-    user_id
+request,
+"SELECT password FROM users WHERE id = ? AND is_active = 1",
+user_id
 )
 
 if not user:
     raise HTTPException(404, "User not found")
 
-if not verify_password(
-    data.old_password,
-    user["password"]
-):
+if not verify_password(data.old_password, user["password"]):
     raise HTTPException(400, "Incorrect old password")
 
 if len(data.new_password) < 8:
@@ -297,19 +242,12 @@ return {
     "message": "Password changed"
 }
 
-==============================
-
-DEACTIVATE ACCOUNT
-
-==============================
-
 @router.delete("/{user_id}")
 async def deactivate_account(user_id: int, request: Request):
-
 user = await fetch_one(
-    request,
-    "SELECT id FROM users WHERE id = ?",
-    user_id
+request,
+"SELECT id FROM users WHERE id = ? AND is_active = 1",
+user_id
 )
 
 if not user:
